@@ -13,6 +13,7 @@ import requests
 
 from datetime import datetime, timedelta
 
+import xlrd_test
 from lxml import etree
 
 import csv
@@ -38,7 +39,7 @@ def parseTime(unformatedTime):
         return unformatedTime
 
 
-def dealHtml(html,out_dir):
+def dealHtml(html, out_dir):
     results = html.xpath('//div[@class="result-op c-container xpath-log new-pmd"]')
 
     saveData = []
@@ -69,7 +70,7 @@ def dealHtml(html,out_dir):
             'time': dateTime,
             'summary': summary
         })
-    with open(os.path.join(out_dir,fileName), 'a+', encoding='utf-8-sig', newline='') as f:
+    with open(os.path.join(out_dir, fileName), 'a+', encoding='utf-8-sig', newline='') as f:
         writer = csv.writer(f)
         for row in saveData:
             writer.writerow([row['title'], row['source'], row['time'], row['summary']])
@@ -122,17 +123,9 @@ def doSpider(keyword, sort_by='focus', export_path=""):
 
     html = etree.HTML(response.text)
 
-    dealHtml(html,export_path)
+    dealHtml(html, export_path)
 
-    total = html.xpath('//div[@id="header_top_bar"]/span/text()')[0]
-
-    total = total.replace(',', '')
-
-    total = int(total[7:-1])
-
-    pageNum = total // 10
-
-    for page in range(1, 5):
+    for page in range(1, 10):
         print('第 {} 页\n\n'.format(page))
         headers['Referer'] = response.url
         params['pn'] = page * 10
@@ -141,14 +134,17 @@ def doSpider(keyword, sort_by='focus', export_path=""):
 
         html = etree.HTML(response.text)
 
-        dealHtml(html,export_path)
+        dealHtml(html, export_path)
 
         sleep(randint(2, 4))
     ...
 
 
 if __name__ == "__main__":
-    company_list = open("../c_data/500", "r", encoding="utf8").readlines()
+    import pandas as pd
+
+    company_list = pd.read_excel(os.path.join('../company_data', '企业查询数据导出-【爱企查】-新能源企业.xls')).values.tolist()
+
     start_time = time.time()
     # main()
 
@@ -157,8 +153,11 @@ if __name__ == "__main__":
 
     ps = Pool(16)
     for company_one in company_list:
+        print(company_one)
         # ps.apply(worker,args=(i,))     # 同步执行
-        ps.apply_async(doSpider, args=(company_one.strip("\n"), 'focus', '../data/baidu_news/500'))  # 异步执行
+        ps.apply_async(doSpider, args=(company_one[0], 'focus', '../export_data/新能源企业'))  # 异步执行
+        ps.apply_async(doSpider,
+                       args=(company_one[0] + " " + company_one[1], 'focus', '../export_data/新能源企业主要人员'))  # 异步执行
         # mulitu_main(visit_info, clinical_data)
     # 关闭进程池，停止接受其它进程
     ps.close()

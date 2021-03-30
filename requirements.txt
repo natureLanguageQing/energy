@@ -4,3 +4,5 @@ pymysql
 graphviz
 pymongo
 xlrd
+lxml
+pandas
